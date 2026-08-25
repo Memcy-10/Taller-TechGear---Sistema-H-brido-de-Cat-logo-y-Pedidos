@@ -17,6 +17,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
+from .views import catalogo
+
 urlpatterns = [
+    path('', catalogo, name='catalogo'),
     path('admin/', admin.site.urls),
 ]

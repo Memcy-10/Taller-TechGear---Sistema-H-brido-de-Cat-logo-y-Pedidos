@@ -1,8 +1,11 @@
-.venv/
-.venv
+./techgear_api/app/.env
+./techgear_api/__pycache__/
+./techgear_api/app/__pycache__/
 .env
 .env/
-.venv/
 .env
+.venv313/
+./venv313
+.venv313
 __pycache__/
 *.pyc

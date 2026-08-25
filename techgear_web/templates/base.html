@@ -1,0 +1,23 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}TechGear{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/catalogo.css' %}">
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="{% url 'catalogo' %}">
+            <span class="brand-mark" aria-hidden="true">TG</span>
+            <span>TechGear</span>
+        </a>
+        <span class="header-label">Tecnologia para tu día</span>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

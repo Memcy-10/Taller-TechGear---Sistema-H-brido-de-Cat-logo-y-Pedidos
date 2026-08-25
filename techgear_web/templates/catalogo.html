@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Catálogo | TechGear{% endblock %}
+
+{% block content %}
+<section class="catalog-hero">
+    <div>
+        <p class="eyebrow">Selección TechGear</p>
+        <h1>Encuentra tu próxima herramienta.</h1>
+        <p class="hero-copy">Tecnología confiable para trabajar, crear y disfrutar mejor.</p>
+    </div>
+    <div class="catalog-count" aria-label="Cantidad de productos">
+        <strong>{{ productos|length }}</strong>
+        <span>productos disponibles</span>
+    </div>
+</section>
+
+<section class="catalog-section" aria-labelledby="catalog-title">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Catálogo</p>
+            <h2 id="catalog-title">Productos destacados</h2>
+        </div>
+        {% if productos %}
+            <span class="result-label">Inventario actualizado</span>
+        {% endif %}
+    </div>
+
+    {% if error %}
+        <div class="state-message state-error" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <div class="product-grid">
+        {% for producto in productos %}
+            <article class="product-card">
+                <div class="product-visual" aria-hidden="true">
+                    <span>{{ producto.nombre|slice:":2"|upper }}</span>
+                </div>
+                <div class="product-body">
+                    <div class="product-meta">
+                        <span class="category">{{ producto.categoria|default:"Tecnología" }}</span>
+                        {% if producto.stock > 0 %}
+                            <span class="stock stock-available">En stock</span>
+                        {% else %}
+                            <span class="stock stock-empty">Agotado</span>
+                        {% endif %}
+                    </div>
+                    <h3>{{ producto.nombre }}</h3>
+                    <p class="description">{{ producto.descripcion|default:"Solución tecnológica diseñada para acompañar tus proyectos." }}</p>
+                    <div class="product-footer">
+                        <span class="price">${{ producto.precio|floatformat:2 }}</span>
+                        {% if producto.stock > 0 %}
+                            <span class="units">{{ producto.stock }} unidades</span>
+                        {% else %}
+                            <span class="units">Sin unidades</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </article>
+        {% empty %}
+            {% if not error %}
+                <div class="state-message">No hay productos disponibles para mostrar.</div>
+            {% endif %}
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
