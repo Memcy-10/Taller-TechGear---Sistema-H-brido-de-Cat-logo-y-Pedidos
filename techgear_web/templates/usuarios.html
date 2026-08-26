@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}Usuarios | TechGear{% endblock %}
+
+{% block content %}
+<section class="catalog-section">
+    <div class="section-heading">
+        <div><p class="eyebrow">Administración</p><h1>Usuarios</h1></div>
+        <a class="action-link" href="{% url 'crear_usuario' %}">Nuevo usuario</a>
+    </div>
+    <div class="user-list">
+        {% for usuario in usuarios %}
+            <article class="user-row">
+                <div><strong>{{ usuario.nombre }}</strong><span>{{ usuario.email }}</span></div>
+                <span class="role role-{{ usuario.rol }}">{{ usuario.rol|title }}</span>
+            </article>
+        {% empty %}
+            <div class="state-message">No hay usuarios registrados.</div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

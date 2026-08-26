@@ -13,7 +13,23 @@
             <span class="brand-mark" aria-hidden="true">TG</span>
             <span>TechGear</span>
         </a>
-        <span class="header-label">Tecnologia para tu día</span>
+            <nav class="site-nav" aria-label="Navegación principal">
+                <a href="{% url 'catalogo' %}">Catálogo</a>
+                {% if request.resolver_match.url_name == 'catalogo' %}
+                    <button type="button" class="nav-cart" id="cart-toggle">Carrito <span>{{ cart_count|default:0 }}</span></button>
+                {% else %}
+                    <a href="{% url 'carrito' %}">Carrito ({{ cart_count|default:0 }})</a>
+                {% endif %}
+                {% if user %}
+                    <span class="user-greeting">Hola, {{ user.nombre }}</span>
+                    {% if user.rol == 'administrador' %}<a href="{% url 'usuarios' %}">Usuarios</a>{% endif %}
+                    {% if user.rol == 'administrador' or user.rol == 'empleado' %}<a href="{% url 'crear_producto' %}">Nuevo producto</a>{% endif %}
+                    <a href="{% url 'logout' %}">Salir</a>
+                {% else %}
+                    <a href="{% url 'login' %}">Ingresar</a>
+                    <a href="{% url 'registro' %}">Registrarme</a>
+                {% endif %}
+            </nav>
     </header>
 
     <main>

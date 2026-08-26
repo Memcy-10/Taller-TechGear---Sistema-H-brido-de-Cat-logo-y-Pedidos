@@ -6,12 +6,13 @@
 <section class="catalog-hero">
     <div>
         <p class="eyebrow">Selección TechGear</p>
-        <h1>Encuentra tu próxima herramienta.</h1>
+        <h1>Encuentra tu nuevo estilo de vida.</h1>
         <p class="hero-copy">Tecnología confiable para trabajar, crear y disfrutar mejor.</p>
     </div>
     <div class="catalog-count" aria-label="Cantidad de productos">
         <strong>{{ productos|length }}</strong>
         <span>productos disponibles</span>
+        <a class="hero-cart-link" href="{% url 'carrito' %}">Ver carrito ({{ cart_count|default:0 }})</a>
     </div>
 </section>
 
@@ -33,8 +34,12 @@
     <div class="product-grid">
         {% for producto in productos %}
             <article class="product-card">
-                <div class="product-visual" aria-hidden="true">
-                    <span>{{ producto.nombre|slice:":2"|upper }}</span>
+                <div class="product-visual">
+                    {% if producto.imagen %}
+                        <img src="{{ producto.imagen }}" alt="{{ producto.nombre }}" loading="lazy">
+                    {% else %}
+                        <span aria-hidden="true">{{ producto.nombre|slice:":2"|upper }}</span>
+                    {% endif %}
                 </div>
                 <div class="product-body">
                     <div class="product-meta">
@@ -55,6 +60,12 @@
                             <span class="units">Sin unidades</span>
                         {% endif %}
                     </div>
+                    {% if producto.stock > 0 %}
+                        <form method="post" action="{% url 'agregar_al_carrito' producto.id %}" class="cart-form">
+                            {% csrf_token %}
+                            <button type="submit" class="cart-button">Agregar al carrito</button>
+                        </form>
+                    {% endif %}
                 </div>
             </article>
         {% empty %}
@@ -64,4 +75,52 @@
         {% endfor %}
     </div>
 </section>
+
+<div class="cart-overlay" id="cart-overlay" hidden></div>
+<aside class="cart-popup" id="cart-popup" aria-labelledby="cart-popup-title" hidden>
+    <div class="cart-popup-header">
+        <div><p class="eyebrow">Compra rápida</p><h2 id="cart-popup-title">Tu carrito</h2></div>
+        <button type="button" class="close-cart" id="cart-close" aria-label="Cerrar carrito">&times;</button>
+    </div>
+    {% if cart_items %}
+        <div class="popup-items">
+            {% for producto in cart_items %}
+                <article class="popup-item">
+                    <div><strong>{{ producto.nombre }}</strong><span>{{ producto.cantidad }} unidad{{ producto.cantidad|pluralize }}</span></div>
+                    <div class="popup-item-actions">
+                        <span>${{ producto.subtotal|floatformat:2 }}</span>
+                        <form method="post" action="{% url 'quitar_del_carrito' producto.id %}">
+                            {% csrf_token %}<input type="hidden" name="next" value="catalogo">
+                            <button type="submit" class="remove-button">Quitar</button>
+                        </form>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+        <div class="popup-total"><span>Total</span><strong>${{ cart_total|floatformat:2 }}</strong></div>
+        <a class="pay-button" href="{% url 'carrito' %}">Ir a comprar</a>
+    {% else %}
+        <div class="state-message">Tu carrito está vacío.</div>
+    {% endif %}
+</aside>
+
+<script>
+    const cartToggle = document.getElementById('cart-toggle');
+    const cartPopup = document.getElementById('cart-popup');
+    const cartOverlay = document.getElementById('cart-overlay');
+    const cartClose = document.getElementById('cart-close');
+
+    function toggleCart(show) {
+        cartPopup.hidden = !show;
+        cartOverlay.hidden = !show;
+        document.body.classList.toggle('cart-open', show);
+    }
+
+    cartToggle?.addEventListener('click', () => toggleCart(true));
+    cartClose?.addEventListener('click', () => toggleCart(false));
+    cartOverlay?.addEventListener('click', () => toggleCart(false));
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') toggleCart(false);
+    });
+</script>
 {% endblock %}
