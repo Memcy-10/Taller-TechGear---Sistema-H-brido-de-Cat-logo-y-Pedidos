@@ -21,16 +21,30 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-tdv9ehl(qmz#69&1uxu$c09xqypud!%=tdz*mm=r=4qx#hk0%o'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-tdv9ehl(qmz#69&1uxu$c09xqypud!%=tdz*mm=r=4qx#hk0%o')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False').lower() in {'1', 'true', 'yes'}
 
 # Permitir hosts de despliegue y el host generado por Vercel.
-ALLOWED_HOSTS = ['*']
+allowed_hosts = ['localhost', '127.0.0.1', '[::1]']
+vercel_host = os.environ.get('VERCEL_PROJECT_PRODUCTION_URL') or os.environ.get('VERCEL_URL')
+if vercel_host:
+    allowed_hosts.append(vercel_host.replace('https://', '').replace('http://', ''))
+ALLOWED_HOSTS = allowed_hosts
 
 # Si el hosting define PORT, Django lo usa para correr correctamente en deploy.
 PORT = os.environ.get('PORT', '8001')
+
+# Corrección para deployments detrás de proxy como Vercel.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.vercel.app',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+]
+if vercel_host:
+    CSRF_TRUSTED_ORIGINS.append(vercel_host)
 
 
 # Application definition
@@ -119,7 +133,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
 
