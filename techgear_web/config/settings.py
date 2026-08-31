@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,7 +26,11 @@ SECRET_KEY = 'django-insecure-tdv9ehl(qmz#69&1uxu$c09xqypud!%=tdz*mm=r=4qx#hk0%o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Permitir hosts de despliegue y el host generado por Vercel.
+ALLOWED_HOSTS = ['*']
+
+# Si el hosting define PORT, Django lo usa para correr correctamente en deploy.
+PORT = os.environ.get('PORT', '8001')
 
 
 # Application definition
