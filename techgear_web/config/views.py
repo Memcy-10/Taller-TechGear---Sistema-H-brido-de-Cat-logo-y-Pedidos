@@ -1,13 +1,13 @@
 import os
-import json
 import base64
+import uuid
 from decimal import Decimal
 
 import httpx
 from django.contrib import messages
 from django.shortcuts import redirect, render
 
-from .forms import LoginForm, OrderForm, ProductForm, RegisterForm, UserForm
+from .forms import LoginForm, OrderForm, OrderManagementForm, ProductForm, UserForm
 
 
 API_BASE_URL = os.getenv("TECHGEAR_API_URL", "http://127.0.0.1:8000")
@@ -18,6 +18,17 @@ def api_request(method, path, request, **kwargs):
     if request.session.get("access_token"):
         headers["Authorization"] = f"Bearer {request.session['access_token']}"
     return httpx.request(method, f"{API_BASE_URL.rstrip('/')}{path}", headers=headers, timeout=5.0, **kwargs)
+
+
+def _safe_api_response(response):
+    try:
+        return response.json()
+    except ValueError:
+        return {}
+
+
+def _is_api_unavailable(exception):
+    return isinstance(exception, (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPStatusError))
 
 
 def catalogo(request):
@@ -139,41 +150,9 @@ def carrito(request):
 
 
 def pagar_carrito(request):
-    user = request.session.get("user")
-    if not user:
-        messages.info(request, "Inicia sesión para pagar tu carrito.")
-        return redirect("login")
     if request.method != "POST":
         return redirect("carrito")
-
-    items, total = obtener_items_carrito(request)
-    if not items:
-        messages.warning(request, "Tu carrito está vacío.")
-        return redirect("carrito")
-
-    productos = [{
-        key: producto[key]
-        for key in ("id", "nombre", "descripcion", "precio", "stock", "categoria")
-        if key in producto
-    } for producto in items]
-    payload = {
-        "id_usuario": user["id"],
-        "nombre_usuario": user["nombre"],
-        "productos": productos,
-        "total": float(total),
-        "estado": "pendiente",
-    }
-    try:
-        api_response = api_request("POST", "/ordenes", request, json=payload)
-    except httpx.HTTPError:
-        messages.error(request, "No fue posible procesar el pago.")
-        return redirect("carrito")
-    if not api_response.is_success:
-        messages.error(request, api_response.json().get("detail", "No fue posible procesar el pago."))
-        return redirect("carrito")
-    request.session["carrito"] = []
-    messages.success(request, "Orden creada correctamente.")
-    return redirect("catalogo")
+    return redirect("crear_orden")
 
 
 def login(request):
@@ -187,17 +166,6 @@ def login(request):
             return redirect("catalogo")
         form.add_error(None, response.json().get("detail", "No fue posible iniciar sesión."))
     return render(request, "form.html", {"form": form, "title": "Iniciar sesión", "submit": "Entrar", "auth_page": "login"})
-
-
-def registro(request):
-    form = RegisterForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        response = httpx.post(f"{API_BASE_URL.rstrip('/')}/auth/registro", json=form.cleaned_data, timeout=5.0)
-        if response.is_success:
-            messages.success(request, "Cuenta creada. Ya puedes iniciar sesión.")
-            return redirect("login")
-        form.add_error(None, response.json().get("detail", "No fue posible crear la cuenta."))
-    return render(request, "form.html", {"form": form, "title": "Crear cuenta", "submit": "Registrarme", "auth_page": "registro"})
 
 
 def logout(request):
@@ -232,22 +200,116 @@ def crear_producto(request):
 
 
 def crear_orden(request):
-    user = request.session.get("user")
-    if not user:
-        return redirect("login")
+    items, total = obtener_items_carrito(request)
+    if not items:
+        messages.warning(request, "Agrega productos al carrito antes de crear una orden.")
+        return redirect("carrito")
+
     form = OrderForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
+        productos = [{
+            key: producto[key]
+            for key in ("id", "nombre", "descripcion", "precio", "stock", "categoria")
+            if key in producto
+        } for producto in items]
+        payload = {
+            "id_usuario": form.cleaned_data["id_usuario"] or uuid.uuid4().hex,
+            "nombre_usuario": form.cleaned_data["nombre_usuario"],
+            "productos": productos,
+            "total": float(total),
+            "estado": "pendiente",
+        }
         try:
-            productos = json.loads(form.cleaned_data["productos"])
-        except json.JSONDecodeError:
-            form.add_error("productos", "Escribe una lista JSON válida.")
-        else:
-            payload = {"id_usuario": user["id"], "nombre_usuario": user["nombre"], "productos": productos, "total": float(form.cleaned_data["total"]), "estado": "pendiente"}
             response = api_request("POST", "/ordenes", request, json=payload)
+        except httpx.HTTPError:
+            form.add_error(None, "No fue posible conectar con la API de órdenes.")
+        else:
             if response.is_success:
+                request.session["carrito"] = []
+                messages.success(request, "Orden creada correctamente.")
                 return redirect("catalogo")
-            form.add_error(None, response.json().get("detail", "No fue posible crear la orden."))
-    return render(request, "form.html", {"form": form, "title": "Nueva orden", "submit": "Crear orden"})
+            detail = _safe_api_response(response).get("detail") or "No fue posible crear la orden."
+            form.add_error(None, detail)
+    return render(request, "orden.html", {
+        "form": form,
+        "items": items,
+        "total": total,
+        "user": request.session.get("user"),
+        "cart_count": sum(item["cantidad"] for item in request.session.get("carrito", [])),
+    })
+
+
+def ordenes(request):
+    try:
+        response = api_request("GET", "/ordenes", request)
+        response.raise_for_status()
+        ordenes_data = response.json().get("data", []) if response.is_success else []
+    except (httpx.HTTPError, ValueError):
+        ordenes_data = []
+        messages.error(request, "La API de órdenes no está disponible en este momento.")
+    return render(request, "ordenes.html", {
+        "ordenes": ordenes_data,
+        "user": request.session.get("user"),
+        "cart_count": sum(item["cantidad"] for item in request.session.get("carrito", [])),
+    })
+
+
+def editar_orden(request, orden_id):
+    try:
+        response = api_request("GET", f"/ordenes/{orden_id}", request)
+        response.raise_for_status()
+        orden = response.json()
+    except (httpx.HTTPError, ValueError):
+        messages.error(request, "No se pudo cargar la orden para editar.")
+        return redirect("ordenes")
+
+    form = OrderManagementForm(request.POST or {
+        "nombre_usuario": orden.get("nombre_usuario", ""),
+        "id_usuario": orden.get("id_usuario", ""),
+        "estado": orden.get("estado", "pendiente"),
+    })
+
+    if request.method == "POST" and form.is_valid():
+        payload = {
+            "id_usuario": form.cleaned_data["id_usuario"] or orden.get("id_usuario"),
+            "nombre_usuario": form.cleaned_data["nombre_usuario"],
+            "estado": form.cleaned_data["estado"],
+            "productos": orden.get("productos", []),
+            "total": orden.get("total", 0),
+        }
+        try:
+            response = api_request("PUT", f"/ordenes/{orden_id}", request, json=payload)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            if getattr(exc, "response", None) is not None:
+                detail = _safe_api_response(exc.response).get("detail") or "No fue posible actualizar la orden."
+            else:
+                detail = "La API de órdenes está caída. No fue posible actualizar la orden."
+            form.add_error(None, detail)
+        else:
+            messages.success(request, "Orden actualizada correctamente.")
+            return redirect("ordenes")
+
+    return render(request, "form.html", {
+        "form": form,
+        "title": "Editar orden",
+        "submit": "Guardar cambios",
+        "user": request.session.get("user"),
+        "cart_count": sum(item["cantidad"] for item in request.session.get("carrito", [])),
+    })
+
+
+def eliminar_orden(request, orden_id):
+    if request.method != "POST":
+        return redirect("ordenes")
+    try:
+        response = api_request("DELETE", f"/ordenes/{orden_id}", request)
+        response.raise_for_status()
+    except (httpx.HTTPError, ValueError):
+        messages.error(request, "No se pudo eliminar la orden porque la API no responde.")
+    else:
+        messages.success(request, "Orden eliminada correctamente.")
+    return redirect("ordenes")
 
 
 def usuarios(request):

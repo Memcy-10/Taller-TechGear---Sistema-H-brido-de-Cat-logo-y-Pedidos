@@ -40,14 +40,10 @@
             <span>Total</span>
             <strong>${{ total|floatformat:2 }}</strong>
         </div>
-        {% if user %}
-            <form method="post" action="{% url 'pagar_carrito' %}">
-                {% csrf_token %}
-                <button type="submit" class="pay-button">Avanzar al pago</button>
-            </form>
-        {% else %}
-            <a class="pay-button" href="{% url 'login' %}">Iniciar sesión para pagar</a>
-        {% endif %}
+        <form method="post" action="{% url 'pagar_carrito' %}">
+            {% csrf_token %}
+            <button type="submit" class="pay-button">Continuar con el pedido</button>
+        </form>
     {% else %}
         <div class="state-message">Tu carrito está vacío.</div>
     {% endif %}

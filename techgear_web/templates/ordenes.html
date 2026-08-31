@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Ordenes | TechGear{% endblock %}
+
+{% block content %}
+<section class="catalog-section">
+    <div class="section-heading">
+        <div><p class="eyebrow">Administración</p><h1>Ordenes</h1></div>
+        <a class="action-link" href="{% url 'crear_orden' %}">Nueva orden</a>
+    </div>
+
+    {% if ordenes %}
+    <div class="user-list">
+        {% for orden in ordenes %}
+        <article class="user-row" style="display:block;">
+            <div style="display:flex; justify-content:space-between; gap:16px; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
+                <div>
+                    <strong>Orden #{{ orden.id|slice:"-6:" }}</strong>
+                    <span>{{ orden.nombre_usuario }} · {{ orden.id_usuario }}</span>
+                </div>
+                <span class="role role-{{ orden.estado|default:'pendiente' }}">{{ orden.estado|default:'pendiente' }}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; gap:16px; align-items:center; flex-wrap:wrap; color:var(--muted); font-size:0.85rem;">
+                <span>{{ orden.productos|length }} productos</span>
+                <strong style="color:var(--ink);">Total: ${{ orden.total|default:0|floatformat:2 }}</strong>
+            </div>
+            <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+                <a class="action-link" href="{% url 'editar_orden' orden.id %}">Editar</a>
+                <form method="post" action="{% url 'eliminar_orden' orden.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="remove-button">Eliminar</button>
+                </form>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="state-message">No hay órdenes registradas hasta el momento.</div>
+    {% endif %}
+</section>
+{% endblock %}

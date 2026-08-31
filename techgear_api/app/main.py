@@ -269,7 +269,7 @@ async def eliminar_producto(producto_id: str, user: dict = Depends(require_roles
     operation_id="listar_ordenes",
     summary="Listar todas las órdenes",
 )
-async def listar_ordenes(user: dict = Depends(require_roles("administrador"))):
+async def listar_ordenes():
     ordenes = await orders_collection.find().to_list(length=None)
     return {"data": [doc_to_model(o) for o in ordenes]}
 
@@ -281,7 +281,7 @@ async def listar_ordenes(user: dict = Depends(require_roles("administrador"))):
     operation_id="buscar_ordenes_por_id_usuario",
     summary="Buscar órdenes por ID de usuario",
 )
-async def buscar_ordenes_por_id_usuario(id_usuario: int, user: dict = Depends(require_roles("administrador"))):
+async def buscar_ordenes_por_id_usuario(id_usuario: int):
     ordenes = await orders_collection.find({"id_usuario": id_usuario}).to_list(length=None)
     return {"data": [doc_to_model(o) for o in ordenes]}
 
@@ -293,7 +293,7 @@ async def buscar_ordenes_por_id_usuario(id_usuario: int, user: dict = Depends(re
     operation_id="buscar_ordenes_por_nombre_usuario",
     summary="Buscar órdenes por nombre de usuario",
 )
-async def buscar_ordenes_por_nombre_usuario(nombre_usuario: str, user: dict = Depends(require_roles("administrador"))):
+async def buscar_ordenes_por_nombre_usuario(nombre_usuario: str):
     ordenes = await orders_collection.find(
         {"nombre_usuario": {"$regex": nombre_usuario, "$options": "i"}}
     ).to_list(length=None)
@@ -307,7 +307,7 @@ async def buscar_ordenes_por_nombre_usuario(nombre_usuario: str, user: dict = De
     operation_id="obtener_orden_por_id",
     summary="Obtener una orden por su ID",
 )
-async def obtener_orden_por_id(orden_id: str, user: dict = Depends(require_roles("administrador"))):
+async def obtener_orden_por_id(orden_id: str):
     oid = parse_object_id(orden_id)
     orden = await orders_collection.find_one({"_id": oid})
     if not orden:
@@ -323,7 +323,10 @@ async def obtener_orden_por_id(orden_id: str, user: dict = Depends(require_roles
     operation_id="crear_orden",
     summary="Crear una nueva orden",
 )
-async def crear_orden(orden: OrderCreate, user: dict = Depends(require_roles("administrador", "empleado", "usuario"))):
+async def crear_orden(orden: OrderCreate):
+    for producto in orden.productos:
+        if producto.stock is None or producto.stock <= 0:
+            raise HTTPException(status_code=400, detail=f"El producto '{producto.nombre}' no tiene stock disponible.")
     doc = orden.model_dump(exclude={"id"})
     result = await orders_collection.insert_one(doc)
     doc["id"] = str(result.inserted_id)
@@ -337,12 +340,17 @@ async def crear_orden(orden: OrderCreate, user: dict = Depends(require_roles("ad
     operation_id="actualizar_orden",
     summary="Actualizar una orden existente",
 )
-async def actualizar_orden(orden_id: str, cambios: OrderUpdate, user: dict = Depends(require_roles("administrador"))):
+async def actualizar_orden(orden_id: str, cambios: OrderUpdate):
     oid = parse_object_id(orden_id)
     datos = {k: v for k, v in cambios.model_dump().items() if v is not None}
 
     if not datos:
         raise HTTPException(status_code=400, detail="No se enviaron campos para actualizar")
+
+    if cambios.productos is not None:
+        for producto in cambios.productos:
+            if producto.stock is None or producto.stock <= 0:
+                raise HTTPException(status_code=400, detail=f"El producto '{producto.nombre}' no tiene stock disponible.")
 
     resultado = await orders_collection.update_one({"_id": oid}, {"$set": datos})
     if resultado.matched_count == 0:
@@ -358,7 +366,7 @@ async def actualizar_orden(orden_id: str, cambios: OrderUpdate, user: dict = Dep
     operation_id="eliminar_orden",
     summary="Eliminar una orden",
 )
-async def eliminar_orden(orden_id: str, user: dict = Depends(require_roles("administrador"))):
+async def eliminar_orden(orden_id: str):
     oid = parse_object_id(orden_id)
     resultado = await orders_collection.delete_one({"_id": oid})
     if resultado.deleted_count == 0:
