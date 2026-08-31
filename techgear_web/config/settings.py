@@ -27,7 +27,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-tdv9ehl(qmz#69&1uxu$c
 DEBUG = os.environ.get('DEBUG', 'False').lower() in {'1', 'true', 'yes'}
 
 # Permitir hosts de despliegue y el host generado por Vercel.
-allowed_hosts = ['localhost', '127.0.0.1', '[::1]']
+allowed_hosts = ['localhost', '127.0.0.1', '[::1]', '.vercel.app']
 vercel_host = os.environ.get('VERCEL_PROJECT_PRODUCTION_URL') or os.environ.get('VERCEL_URL')
 if vercel_host:
     allowed_hosts.append(vercel_host.replace('https://', '').replace('http://', ''))
