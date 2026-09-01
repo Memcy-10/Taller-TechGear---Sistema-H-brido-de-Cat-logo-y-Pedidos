@@ -175,6 +175,29 @@ def pagar_carrito(request):
     return redirect("crear_orden")
 
 
+def crear_producto(request):
+    form = ProductForm(request.POST or None)
+    if request.method == "POST":
+        form = ProductForm(request.POST, request.FILES)
+    if request.method == "POST" and form.is_valid():
+        payload = {**form.cleaned_data, "precio": float(form.cleaned_data["precio"]) }
+        image = form.cleaned_data.get("imagen")
+        if image:
+            encoded_image = base64.b64encode(image.read()).decode("ascii")
+            payload["imagen"] = f"data:{image.content_type};base64,{encoded_image}"
+        else:
+            payload["imagen"] = None
+        try:
+            response = api_request("POST", "/productos", request, json=payload)
+        except httpx.HTTPError:
+            form.add_error(None, "No fue posible conectar con la API de productos.")
+        else:
+            if response.is_success:
+                return redirect("catalogo")
+            form.add_error(None, response.json().get("detail") or "No fue posible guardar el producto.")
+    return render(request, "form.html", {"form": form, "title": "Nuevo producto", "submit": "Guardar producto"})
+
+
 def crear_orden(request):
     items, total = obtener_items_carrito(request)
     if not items:

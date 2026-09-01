@@ -16,6 +16,7 @@
             <nav class="site-nav" aria-label="Navegación principal">
                 <a href="{% url 'catalogo' %}">Catálogo</a>
                 <a href="{% url 'ordenes' %}">Ordenes</a>
+                <a href="{% url 'crear_producto' %}">Agregar producto</a>
                 {% if request.resolver_match.url_name == 'catalogo' %}
                     <button type="button" class="nav-cart" id="cart-toggle">Carrito <span>{{ cart_count|default:0 }}</span></button>
                 {% else %}
