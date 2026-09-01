@@ -7,7 +7,7 @@ import httpx
 from django.contrib import messages
 from django.shortcuts import redirect, render
 
-from .forms import LoginForm, OrderForm, OrderManagementForm, ProductForm, UserForm
+from .forms import OrderForm, OrderManagementForm, ProductForm
 
 
 API_BASE_URL = os.getenv("TECHGEAR_API_URL", "http://127.0.0.1:8000")
@@ -31,6 +31,24 @@ def _is_api_unavailable(exception):
     return isinstance(exception, (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPStatusError))
 
 
+def _sanitize_imagen(producto):
+    raw = producto.get("imagen")
+    if raw is None:
+        producto["imagen"] = None
+        return producto
+
+    cleaned = str(raw).strip().replace("\n", "").replace("\r", "")
+    if not cleaned:
+        producto["imagen"] = None
+        return producto
+
+    if cleaned.startswith(("data:image/", "http://", "https://", "/")):
+        producto["imagen"] = cleaned
+    else:
+        producto["imagen"] = None
+    return producto
+
+
 def catalogo(request):
     """Obtiene los productos de la API y los entrega al catalogo."""
     productos = []
@@ -45,6 +63,7 @@ def catalogo(request):
         productos = response.json().get("data") or []
     except (httpx.HTTPError, ValueError, AttributeError):
         error = "No fue posible cargar el catalogo en este momento."
+    productos = [_sanitize_imagen(producto) for producto in productos]
     cart_items, cart_total = obtener_items_carrito(request)
 
     return render(
@@ -134,6 +153,7 @@ def obtener_items_carrito(request):
             continue
         producto["cantidad"] = cantidad
         producto["subtotal"] = Decimal(str(producto["precio"])) * cantidad
+        _sanitize_imagen(producto)
         total += producto["subtotal"]
         items.append(producto)
     return items, total
@@ -153,50 +173,6 @@ def pagar_carrito(request):
     if request.method != "POST":
         return redirect("carrito")
     return redirect("crear_orden")
-
-
-def login(request):
-    form = LoginForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        response = httpx.post(f"{API_BASE_URL.rstrip('/')}/auth/login", json=form.cleaned_data, timeout=5.0)
-        if response.is_success:
-            data = response.json()
-            request.session["access_token"] = data["access_token"]
-            request.session["user"] = data["user"]
-            return redirect("catalogo")
-        form.add_error(None, response.json().get("detail", "No fue posible iniciar sesión."))
-    return render(request, "form.html", {"form": form, "title": "Iniciar sesión", "submit": "Entrar", "auth_page": "login"})
-
-
-def logout(request):
-    if request.session.get("access_token"):
-        try:
-            api_request("POST", "/auth/logout", request)
-        except httpx.HTTPError:
-            pass
-    request.session.flush()
-    return redirect("catalogo")
-
-
-def crear_producto(request):
-    if request.session.get("user", {}).get("rol") not in {"administrador", "empleado"}:
-        return redirect("login")
-    form = ProductForm(request.POST or None)
-    if request.method == "POST":
-        form = ProductForm(request.POST, request.FILES)
-    if request.method == "POST" and form.is_valid():
-        payload = {**form.cleaned_data, "precio": float(form.cleaned_data["precio"])}
-        image = form.cleaned_data.get("imagen")
-        if image:
-            encoded_image = base64.b64encode(image.read()).decode("ascii")
-            payload["imagen"] = f"data:{image.content_type};base64,{encoded_image}"
-        else:
-            payload["imagen"] = None
-        response = api_request("POST", "/productos", request, json=payload)
-        if response.is_success:
-            return redirect("catalogo")
-        form.add_error(None, response.json().get("detail", "No fue posible guardar el producto."))
-    return render(request, "form.html", {"form": form, "title": "Nuevo producto", "submit": "Guardar producto"})
 
 
 def crear_orden(request):
@@ -311,22 +287,3 @@ def eliminar_orden(request, orden_id):
         messages.success(request, "Orden eliminada correctamente.")
     return redirect("ordenes")
 
-
-def usuarios(request):
-    if request.session.get("user", {}).get("rol") != "administrador":
-        return redirect("login")
-    response = api_request("GET", "/usuarios", request)
-    usuarios_data = response.json().get("data", []) if response.is_success else []
-    return render(request, "usuarios.html", {"usuarios": usuarios_data})
-
-
-def crear_usuario(request):
-    if request.session.get("user", {}).get("rol") != "administrador":
-        return redirect("login")
-    form = UserForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        response = api_request("POST", "/usuarios", request, json=form.cleaned_data)
-        if response.is_success:
-            return redirect("usuarios")
-        form.add_error(None, response.json().get("detail", "No fue posible crear el usuario."))
-    return render(request, "form.html", {"form": form, "title": "Nuevo usuario", "submit": "Crear usuario"})

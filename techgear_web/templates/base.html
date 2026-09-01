@@ -21,13 +21,6 @@
                 {% else %}
                     <a href="{% url 'carrito' %}">Carrito ({{ cart_count|default:0 }})</a>
                 {% endif %}
-                {% if user %}
-                    <span class="user-greeting">Hola, {{ user.nombre }}</span>
-                    {% if user.rol == 'administrador' %}<a href="{% url 'usuarios' %}">Usuarios</a>{% endif %}
-                    {% if user.rol == 'administrador' or user.rol == 'empleado' %}<a href="{% url 'crear_producto' %}">Nuevo producto</a>{% endif %}
-                {% else %}
-                    <a href="{% url 'login' %}">Ingresar</a>
-                {% endif %}
             </nav>
     </header>
 

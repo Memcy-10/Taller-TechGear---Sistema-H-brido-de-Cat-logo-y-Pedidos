@@ -1,22 +1,6 @@
 from django import forms
 
 
-class LoginForm(forms.Form):
-    email = forms.EmailField(label="Correo")
-    password = forms.CharField(label="Contraseña", widget=forms.PasswordInput)
-
-
-class UserForm(forms.Form):
-    nombre = forms.CharField(label="Nombre", max_length=120)
-    email = forms.EmailField(label="Correo")
-    password = forms.CharField(label="Contraseña", min_length=6, widget=forms.PasswordInput)
-    rol = forms.ChoiceField(choices=[
-        ("usuario", "Usuario"),
-        ("empleado", "Empleado"),
-        ("administrador", "Administrador"),
-    ])
-
-
 class ProductForm(forms.Form):
     nombre = forms.CharField(max_length=120)
     descripcion = forms.CharField(widget=forms.Textarea, required=False)

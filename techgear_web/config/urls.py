@@ -18,9 +18,8 @@ from django.contrib import admin
 from django.urls import path
 
 from .views import (actualizar_carrito, agregar_al_carrito, carrito, catalogo, crear_orden,
-                    crear_producto, crear_usuario, editar_orden, eliminar_orden,
-                    login, logout, ordenes, pagar_carrito, quitar_del_carrito,
-                    usuarios)
+                    editar_orden, eliminar_orden, ordenes, pagar_carrito,
+                    quitar_del_carrito)
 
 urlpatterns = [
     path('', catalogo, name='catalogo'),
@@ -29,14 +28,9 @@ urlpatterns = [
     path('carrito/actualizar/<str:producto_id>/', actualizar_carrito, name='actualizar_carrito'),
     path('carrito/quitar/<str:producto_id>/', quitar_del_carrito, name='quitar_del_carrito'),
     path('carrito/pagar/', pagar_carrito, name='pagar_carrito'),
-    path('login/', login, name='login'),
-    path('logout/', logout, name='logout'),
-    path('productos/nuevo/', crear_producto, name='crear_producto'),
     path('ordenes/', ordenes, name='ordenes'),
     path('ordenes/nueva/', crear_orden, name='crear_orden'),
     path('ordenes/<str:orden_id>/editar/', editar_orden, name='editar_orden'),
     path('ordenes/<str:orden_id>/eliminar/', eliminar_orden, name='eliminar_orden'),
-    path('usuarios/', usuarios, name='usuarios'),
-    path('usuarios/nuevo/', crear_usuario, name='crear_usuario'),
     path('admin/', admin.site.urls),
 ]
