@@ -33,11 +33,30 @@ app = FastAPI(
 
 
 def doc_to_model(doc: dict) -> dict:
-    """Convierte el _id de Mongo (ObjectId) en id (str) para que encaje con los modelos Pydantic."""
-    if doc and "_id" in doc:
-        doc["id"] = str(doc["_id"])
-        del doc["_id"]
-    return doc
+    """Convierte el _id de Mongo (ObjectId) en id (str) sin mutar el documento original."""
+    if not isinstance(doc, dict):
+        return doc
+    normalized = dict(doc)
+    if "_id" in normalized:
+        normalized["id"] = str(normalized["_id"])
+        normalized.pop("_id", None)
+    return normalized
+
+
+def safe_list_response(collection, *, key: str = "data"):
+    """Devuelve un listado seguro aunque alguno de los documentos de Mongo sea inválido."""
+    items = []
+    try:
+        docs = collection.find().to_list(length=None)
+    except Exception:
+        return {key: []}
+
+    for doc in docs:
+        try:
+            items.append(doc_to_model(doc))
+        except Exception:
+            continue
+    return {key: items}
 
 
 def parse_object_id(id_str: str) -> ObjectId:
@@ -123,7 +142,13 @@ async def cerrar_sesion(user: dict = Depends(current_user)):
 @app.get("/usuarios", response_model=UserResponse, tags=["Usuarios"])
 async def listar_usuarios(user: dict = Depends(require_roles("administrador"))):
     usuarios = await users_collection.find().to_list(length=None)
-    return {"data": [public_user(usuario) for usuario in usuarios]}
+    safe_users = []
+    for usuario in usuarios:
+        try:
+            safe_users.append(public_user(usuario))
+        except Exception:
+            continue
+    return {"data": safe_users}
 
 
 @app.post("/usuarios", response_model=UserBase, status_code=201, tags=["Usuarios"])
@@ -175,7 +200,7 @@ async def eliminar_usuario(usuario_id: str, user: dict = Depends(require_roles("
 )
 async def listar_productos():
     productos = await products_collection.find().to_list(length=None)
-    return {"data": [doc_to_model(p) for p in productos]}
+    return {"data": [doc_to_model(p) for p in productos if isinstance(p, dict)]}
 
 
 @app.get(
@@ -271,7 +296,7 @@ async def eliminar_producto(producto_id: str, user: dict = Depends(require_roles
 )
 async def listar_ordenes():
     ordenes = await orders_collection.find().to_list(length=None)
-    return {"data": [doc_to_model(o) for o in ordenes]}
+    return {"data": [doc_to_model(o) for o in ordenes if isinstance(o, dict)]}
 
 
 @app.get(

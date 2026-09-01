@@ -36,10 +36,18 @@ ALLOWED_HOSTS = allowed_hosts
 # Si el hosting define PORT, Django lo usa para correr correctamente en deploy.
 PORT = os.environ.get('PORT', '8001')
 
+# En Vercel/entornos serverless no se debe escribir en SQLite del sistema de archivos.
+# Usamos sesiones en cookies firmadas para evitar que Django intente guardar la sesión en un disco de solo lectura.
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = not DEBUG
+
 # Corrección para deployments detrás de proxy como Vercel.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_TRUSTED_ORIGINS = [
     'https://*.vercel.app',
+    'https://*.onrender.com',
     'http://localhost:8000',
     'http://127.0.0.1:8000',
 ]
