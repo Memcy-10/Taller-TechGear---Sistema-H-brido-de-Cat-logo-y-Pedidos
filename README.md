@@ -109,3 +109,11 @@ En la capa web esto se refleja con mensajes en pantalla y validaciones del formu
 ## Nota de la demo
 
 Esta es una prueba funcional sin seguridad avanzada. Para la demostración, el CRUD de órdenes y la web se ejecutan sin exigir autenticación adicional.
+
+## Links del aplicativo
+
+## Frontend
+vercel: https://taller-tech-gear-sistema-h-brido-de.vercel.app
+
+## Backend
+render: https://taller-techgear-sistema-h-brido-de-cat.onrender.com/
