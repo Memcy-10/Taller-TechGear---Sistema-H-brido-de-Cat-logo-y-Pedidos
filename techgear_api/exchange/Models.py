@@ -1,40 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import Literal, Optional, List, Union
+from typing import Optional, List, Union
 
-UserRole = Literal["administrador", "empleado", "usuario"]
-
-
-class UserBase(BaseModel):
-    id: Optional[str] = Field(None, description="ID del usuario")
-    nombre: str = Field(..., min_length=2, description="Nombre completo")
-    email: str = Field(..., min_length=5, description="Correo electrónico")
-    rol: UserRole = Field("usuario", description="Rol del usuario")
-
-
-class UserCreate(UserBase):
-    password: str = Field(..., min_length=6, description="Contraseña")
-
-
-class UserUpdate(BaseModel):
-    nombre: Optional[str] = Field(None, min_length=2)
-    email: Optional[str] = Field(None, min_length=5)
-    rol: Optional[UserRole] = None
-    password: Optional[str] = Field(None, min_length=6)
-
-
-class UserResponse(BaseModel):
-    data: Optional[list[UserBase]] = None
-
-
-class LoginRequest(BaseModel):
-    email: str
-    password: str
-
-
-class LoginResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    user: UserBase
 
 # Modelos base para productos y ordenes
 class ProductBase(BaseModel):

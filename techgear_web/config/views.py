@@ -15,8 +15,6 @@ API_BASE_URL = os.getenv("TECHGEAR_API_URL", "http://127.0.0.1:8000")
 
 def api_request(method, path, request, **kwargs):
     headers = kwargs.pop("headers", {})
-    if request.session.get("access_token"):
-        headers["Authorization"] = f"Bearer {request.session['access_token']}"
     return httpx.request(method, f"{API_BASE_URL.rstrip('/')}{path}", headers=headers, timeout=5.0, **kwargs)
 
 
@@ -72,7 +70,6 @@ def catalogo(request):
         {
             "productos": productos,
             "error": error,
-            "user": request.session.get("user"),
             "cart_count": sum(item["cantidad"] for item in request.session.get("carrito", [])),
             "cart_items": cart_items,
             "cart_total": cart_total,
@@ -164,7 +161,6 @@ def carrito(request):
     return render(request, "carrito.html", {
         "items": items,
         "total": total,
-        "user": request.session.get("user"),
         "cart_count": sum(item["cantidad"] for item in request.session.get("carrito", [])),
     })
 
@@ -233,7 +229,6 @@ def crear_orden(request):
         "form": form,
         "items": items,
         "total": total,
-        "user": request.session.get("user"),
         "cart_count": sum(item["cantidad"] for item in request.session.get("carrito", [])),
     })
 
@@ -248,7 +243,6 @@ def ordenes(request):
         messages.error(request, "La API de órdenes no está disponible en este momento.")
     return render(request, "ordenes.html", {
         "ordenes": ordenes_data,
-        "user": request.session.get("user"),
         "cart_count": sum(item["cantidad"] for item in request.session.get("carrito", [])),
     })
 
@@ -293,7 +287,6 @@ def editar_orden(request, orden_id):
         "form": form,
         "title": "Editar orden",
         "submit": "Guardar cambios",
-        "user": request.session.get("user"),
         "cart_count": sum(item["cantidad"] for item in request.session.get("carrito", [])),
     })
 
